@@ -1,0 +1,35 @@
+{
+    "$comment" : "JSON Schema for TestGatewayPing test parameters",
+    "$comment" : "",
+    "$comment" : "Version 1.0, 08/13/2019",
+    "$comment" : "",
+
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "id": "https://128technology.com/schemas/GatewayPing.json#",
+    "title": "DeviceNamespace",
+    "description": "Refine Device Namespace Test Behavior",
+    "type" : "object",
+    "properties" : {
+        "network-interfaces"  : {
+            "type"  : "array",
+            "items" : { "type" : "string" }
+        },
+        "exclude_tests" : {
+            "type" : "array",
+            "items" : {
+                "type" : "object",
+                "properties" : {
+                    "node_type" : { 
+                        "type" : "string",
+                             "enum" : [
+                                  "primary",
+                                  "secondary"
+                             ] 
+                        },
+                    "name" : { "type" : "string" }
+                }
+            }
+        }
+    },
+    "required" : [ "network-interfaces" ]
+}

@@ -1,0 +1,50 @@
+{
+    "$comment" : "JSON Schema for TestLogs test parameters",   
+    "$comment" : "",
+    "$comment" : "Version 1.0, 08/13/2019",
+    "$comment" : "",
+
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "id": "https://128technology.com/schemas/TestLogs.json#",
+    "title": "Logs",
+    "description": "Refine Log Matching Test Behavior",
+    "type" : "object",
+    "properties" : {
+        "node_type" : { 
+            "type" : "string",
+            "enum" : [
+                "primary",
+                "secondary"
+            ] 
+        },
+        "log_path" : { "type" : "string" },
+        "log_glob" : { "type" : "string" },
+        "past_hours" : { "type" : "integer", "minimum" : 0 },
+        "max_lines" : { "type" : "integer", "minimum" : 0 },
+        "extra_granularity" : { "type" : "boolean", "default" : false },
+        "excludes" : {
+            "type" : "array",
+            "items" : {
+                "type" : "string"
+            }
+        },
+        "patterns" : {
+            "type" : "array",
+            "items" : {
+                "type" : "object",
+                "properties" : {
+                    "regex" : { "type" : "string" },
+		    "format" : { "type" : "string" },
+                    "threshold" : { "type" : "integer", "minimum" : 0 }
+		}
+            }
+        },
+        "result" : {
+            "type" : "object",
+ 	    "properties" : {
+		"PASS" : { "type" : "string" },
+		"FAIL" : { "type" : "string" }
+            }
+        }
+   }
+}

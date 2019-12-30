@@ -1,0 +1,33 @@
+{
+    "$comment" : "JSON Schema for PeerReachability test parameters",
+    "$comment" : "",
+    "$comment" : "Version 1.0, 08/13/2019",
+    "$comment" : "",
+
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "id": "https://128technology.com/schemas/PeerReachability.json#",
+    "title": "DeviceNamespace",
+    "description": "Refine Peer Reachability Test Behavior (GraphQL-based)",
+    "type" : "object",
+    "properties" : {
+        "expected_entries"  : {
+            "type"  : "integer",
+            "minimum" : 1
+        },
+        "exclude_tests" : {
+            "type" : "array",
+            "items" : {
+                "type" : "object",
+                "properties" : {
+                    "status" : { 
+                        "type" : "string",
+                             "enum" : [
+                                  "CONNECTED",
+                                  "DISCONNECTED"
+                             ] 
+                        }
+                   }
+              }
+         }
+    }
+}
