@@ -1,0 +1,81 @@
+{
+    "$comment" : "JSON Schema for TestServiceConfig test parameters",   
+    "$comment" : "",
+    "$comment" : "Version 1.0, 04/09/2020",
+    "$comment" : "",
+
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "id": "https://128technology.com/schemas/ServiceConfig.json#",
+    "title": "ServiceConfig",
+    "description": "Refine ServiceConfig Test Behavior",
+    "type" : "object",
+    "properties" : {
+        "query" : {
+            "type" : "object",
+            "properties" : {
+                "arguments" : {
+                    "type" : "object" 
+                },
+                "fields" : {
+		    "type" : "array",
+                    "items" : {
+		        "type" : "string"
+                    }
+                }
+            }
+        },
+        "expected_count" : { "type" : "integer", "minimum" : 0 },
+        "flatten_path" : { "type" : "string" },
+        "entry_tests" : {
+	    "type" : "object",
+	    "properties" : {
+	        "no_match" : {
+                     "type" : "object",
+ 		     "properties" : {
+		         "format" : { "type" : "string" },
+		         "status" : { 
+			    "type" : "string", 
+			    "enum" : [ 
+			       "FAIL", 
+			       "WARN", 
+			       "PASS" 
+			  ] 
+		      }
+                   }
+               },
+               "defaults" : {
+                   "type" : "object",
+                   "properties" : {
+		       "format" : { "type" : "string" },
+		       "status" : { 
+		           "type" : "string", 
+		           "enum" : [ 
+			       "FAIL", 
+			       "WARN", 
+			       "PASS" 
+			   ] 
+		       }
+                   }
+               },
+	       "tests" : {
+                   "type" : "array",
+                   "items" : {
+                       "type" : "object",
+                       "properties" : {
+                            "test" : { "type" : "string" },
+		            "format" : { "type" : "string" },
+		            "status" : { 
+			         "type" : "string", 
+			         "enum" : [ 
+			             "FAIL", 
+			             "WARN", 
+			             "PASS" 
+			         ]
+                            } 
+		         }
+                     }
+                }
+            }
+        }
+   }
+}

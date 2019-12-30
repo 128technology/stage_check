@@ -1,0 +1,2 @@
+# Ignore pex build directory tree
+__pycache__

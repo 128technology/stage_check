@@ -1,0 +1,194 @@
+#!/usr/bin/bash
+###############################################################################
+# 
+#     _           _ _     _                      
+#    | |__  _   _(_) | __| |     _ __   _____  __
+#    | '_ \| | | | | |/ _` |    | '_ \ / _ \ \/ /
+#    | |_) | |_| | | | (_| |    | |_) |  __/>  < 
+#    |_.__/ \__,_|_|_|\__,_|____| .__/ \___/_/\_\
+#                         |_____|_|         
+#    
+#    Builds one or more pex files using traditional python wheel staging
+#    directories:
+#
+#    project_name/
+#    project_name/setup.py
+#    project_name/requirements.txt
+#    project_name/project_name/
+#    project_name/project_name/__main__.py    
+#    :
+#    :
+#
+#    For each project, a build_<project_name> directory is created,
+#    along with a dedicated python3.6 venv. The source from the project
+#    is copied into the build directory, additional modules required
+#    for testing are installed, pytest is run against 
+#    project_name/project_name/test_*.py -- and if successful, the
+#    <project_name>.pex file is created.
+#
+###############################################################################
+
+TARGET_DIR=build
+SCRIPT_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+TARGET_PATH="$SCRIPT_PATH/$TARGET_DIR"
+PYTHON=python3.6
+ABSOLUTE_PYTHON="/usr/bin/$PYTHON"
+VENV_DIR=python36
+VENV_BIN_DIR="$VENV_DIR/bin"
+BUILD_PEX_TOUCH_FILE='.je92hsdfiuy39rqlwewjegekriute4yrwker3u4rwekfjje'
+SOURCE_DIRS=(stage_check)
+DEFAULT_CONFIG_FILE="config.json"
+CONFIG_FILE="$DEFAULT_CONFIG_FILE"
+VIRTUALENV=$(which virtualenv)
+
+echo "Process Args..."
+while getopts "d:c:v" options ; do
+    case "$options" in
+        'd') SOURCE_DIRS=(${OPTARG})
+             ;;
+        'c') CONFIG_FILE=${OPTARG}
+             echo "CONFIG=${CONFIG_FILE}" 
+             ;;
+        'v') MAKE_PEX_VERBOSE=0
+             ;;
+         *)  echo "Invalid Argument $option..."
+             exit 1
+             ;;
+    esac
+done
+echo "Process Args Complete"
+
+# terminal color/style control characters                                                                                                                                                                   
+TERMINAL_COLOR_RED='\033[0;31m'
+TERMINAL_COLOR_BLUE='\033[0;34m'
+TERMINAL_COLOR_GREEN='\033[0;32m'
+TERMINAL_COLOR_NONE='\033[0m'
+TERMINAL_STYLE_BOLD=$(tput bold)
+TERMINAL_STYLE_NORMAL=$(tput sgr0)
+
+function print_message {
+    local _prestr=${TERMINAL_COLOR_BLUE}
+    local _poststr=${TERMINAL_STYLE_NORMAL}
+
+    _fmt=$1
+    if [ -z "$_fmt" ] ; then
+        return 1
+    fi
+    shift
+
+    _format="${_prestr}${_fmt}${_poststr}\n"
+    printf "$_format" "$@"
+}
+
+function print_error {
+    local _prestr=${TERMINAL_COLOR_RED}
+    local _prestr=${_prestr}${TERMINAL_STYLE_BOLD}
+    local _poststr=${TERMINAL_STYLE_NORMAL}
+
+    _fmt=$1
+    if [ -z "$_fmt" ] ; then
+        return 1
+    fi
+    shift
+
+    _format="${_prestr}${_fmt}${_poststr}\n"
+    printf "$_format" "$@"
+}
+
+#TOOLS_MODULE_LIST=(\
+#  pex \
+#  tox \
+#  wheel \
+#  mock \
+#  pyfakefs \
+#  pytest \
+#  pytest_mock \
+#  responses
+#)
+
+TOOLS_MODULE_LIST=(\
+  pex \
+  tox \
+  wheel \
+)
+
+for dir in ${SOURCE_DIRS[@]} ; do
+    cur_target="$dir"
+    target_build_path="$TARGET_PATH"_"$dir"
+    target_touch_file="$target_build_path"/"$BUILD_PEX_TOUCH_FILE"
+    if [ -d "$target_build_path" ] ; then
+         print_message "Delete directory $target_build_path"
+        if [ -e "$target_touch_file" ] ; then
+             rm -rf $target_build_path/*
+        else
+            print_error  "**** ERROR $target_build_path not created by build_pex; skipping $dir ****"
+            exit 1
+        fi
+    fi
+    if [ ! -d $target_build_path ] ; then
+        print_message "Create directory $target_build_path"
+        mkdir -p "$target_build_path"
+        touch "$target_touch_file"
+    fi
+
+    print_message "Build python virtual env..."
+    pushd "$target_build_path"
+    #$ABSOLUTE_PYTHON -m venv python36
+    # Using --system-site-packages causes pex to use the wrongversion of pex (wont understand
+    # --no-version-warnings option).  Fortunately site packages only need to be avaiable to
+    # tox, for testing purposes.
+    #$VIRTUALENV -p python3.6 --system-site-packages python36
+    $VIRTUALENV -p python3.6 python36
+    print_message "Activating python virtual env using $target_build_path/$VENV_BIN_DIR"
+    source $target_build_path/$VENV_BIN_DIR/activate
+    result=$?
+    print_message "Activate python virtual env returned: $result..."
+    print_message $PATH
+
+    print_message "Populate python venv with common tools..."
+    for mod in ${TOOLS_MODULE_LIST[@]} ; do
+        print_message $PYTHON -m pip install $mod
+        $PYTHON -m pip install $mod 
+    done
+    popd
+
+    print_message "Processing $cur_target..."
+    pushd "$SCRIPT_PATH/$dir"
+
+    tox 
+    toxstatus=$?
+
+    popd
+    if [ $toxstatus -ne 0 ] ; then
+        print_error "**** ERROR pytest status=$pystatus; skipping $dir ****"
+        exit 1
+    fi
+
+    # cp -R "$SCRIPT_PATH/$dir"/* would copy the tests directory, which
+    # is not desireable
+    print_message "copy $SCRIPT_PATH/$dir/* -> $target_build_path"
+    mkdir -p "$target_build_path/$dir"
+    cp "$SCRIPT_PATH/$dir"/* "$target_build_path/$dir"
+    print_message "copy $SCRIPT_PATH/$dir/$dir* -> $target_build_path/$dir/$dir"
+    mkdir -p "$target_build_path/$dir/$dir"
+    cp -R "$SCRIPT_PATH/$dir/$dir/"* "$target_build_path/$dir/$dir"
+
+    # tmporary solution for different config profiles -- overwrite config.json 
+    # with whichever config file is desried
+    if [ "$CONFIG_FILE" != "$DEFAULT_CONFIG_FILE" ] && \
+        [ -e "$SCRIPT_PATH/$dir/$dir/$CONFIG_FILE" ] ; then
+	print_message "copy $SCRIPT_PATH/$dir/$dir/$CONFIG_FILE -> $target_build_path/$dir/$DEFAULT_CONFIG_FILE"
+	cp -f "$SCRIPT_PATH/$dir/$dir/$CONFIG_FILE" "$target_build_path/$dir/$DEFAULT_CONFIG_FILE"
+    fi
+
+    pushd $target_build_path/$dir
+    $PYTHON -m pip wheel . .
+    requirement_file="$SCRIPT_PATH/$dir/requirements.txt"
+    # pex --disable-cache  -f $PWD requests ncclient lxml jmespath $dir -e $dir.__main__:main -o $dir.pex 
+    print_message "pex ---emit-warnings -disable-cache  -f $PWD --requirement=$requirement_file $dir -e $dir.__main__:main -o $dir.pex"
+    pex --emit-warnings --disable-cache  -f $PWD --requirement=$requirement_file $dir -e $dir.__main__:main -o $dir.pex 
+    if [ $? -ne 0 ] ; then
+	print_message "ERROR building $PWD/$dir.pex"
+    fi
+    popd
+done

@@ -1,0 +1,22 @@
+{
+    "$comment" : "JSON Schema for TestRecentCores test parameters",
+    "$comment" : "",
+    "$comment" : "Version 1.0, 08/13/2019",
+    "$comment" : "",
+
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "id": "https://128technology.com/schemas/RecenCores.json#",
+    "title": "RecentCores",
+    "description": "Refine Recent Cores Detection",
+    "type" : "object",
+    "properties" : {
+        "node_type" : { "type" : "string" },
+        "service" : { "type" : "string" },
+        "exclude_tests" : {
+            "type" : "array",
+            "items" : {
+                "type" : "string"
+            }
+        }
+    }
+}

@@ -1,0 +1,70 @@
+{
+    "$comment" : "Main JSON schema for stage check test specifications",
+    "$comment" : "",
+    "$comment" : "Version 1.0, 08/13/2019",
+    "$comment" : "",
+
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "id": "https://128technology.com/schemas/config_schema.json#",
+    "title": "config_schema",
+    "description": "Indicates which tests to run, and how to run them",
+    "type" : "object",
+    "properties" : {
+        "BannerModule" : { "type" : "string" },
+        "HWTypeConversions" : {
+            "type"  : "array",
+            "items" : {
+                "properties" : {
+                     "match"   : { "type" : "string" },
+                     "replace" : { "type" : "string" }
+                 }
+            }
+        },
+        "RouterContextModule" : { "type" : "string" },
+        "RouterContextData" : { 
+            "type" : "object",
+            "patternProperties" : {
+                "^[a-zA-Z0-9_-]+" :  { "type" : "string" } 
+            }
+        },
+        "ProfileModule"       : { "type" : "string" },
+        "PrimaryRegex"        : { "type" : "string" },
+        "SecondaryRegex"      : { "type" : "string" },
+        "SiteNumberRegex"     : { "type" : "string" },
+        "SuppressAboutText"   : { "type" : "boolean" },
+        "Tests" : {
+            "type" : "array",
+            "items" : {
+                "properties" : {
+                    "TestModule"    :  { "type" : "string" },
+                    "OutputModule"  :  { "type" : "string" },
+                    "Description"   :  { "type" : "string" },
+                    "SkipIfOneNode" :  { "type" : "boolean" },
+                    "Enable"        :  { "type" : "boolean" },
+                    "Timeout"       :  { "type" : "integer", "minimum" : 0, "maximum" : 300 },
+                    "Detail"        :  { "type" : "string" },
+                    "HWTypes"       :  { 
+                        "type" : "array",
+                        "items" : {
+                             "type" : "string"
+                        }  
+                    },
+		    "Tags" : {
+			"type" : "array",
+			"items" : {
+                             "type" : "string"
+			}
+                    },   
+                    "OneOf"       : {
+                        "Parameters"  :  {
+                            "type" : "array"
+                        },
+                        "ParameterFile" : { "type" : "string" }
+                    }
+                },
+		"required" : [ "TestModule", "OutputModule", "Description" ]
+            }
+        }
+    },
+    "required" : [ "RouterContextModule" ]
+}

@@ -1,0 +1,94 @@
+{
+    "$comment" : "JSON Schema for TestGatewayPing test parameters",
+    "$comment" : "",
+    "$comment" : "Version 1.0, 08/13/2019",
+    "$comment" : "",
+
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "id": "https://128technology.com/schemas/GatewayPing.json#",
+    "title": "Check LTE Namespace",
+    "description": "Refine Device Namespace Test Behavior",
+    "type" : "object",
+    "properties" : {
+        "network-interfaces"  : {
+            "type"  : "array",
+            "items" : { "type" : "string" }
+        },
+        "exclude_tests" : {
+            "type" : "array",
+            "items" : {
+                "type" : "string"
+            }
+        },
+        "default_result" : {
+            "type" : "array",
+            "items" : {
+                "type" : "object",
+                "properties" : {
+		    "status" : { 
+			"type" : "string", 
+			"enum" : [ 
+			    "FAIL", 
+			    "WARN", 
+			    "PASS" 
+			] 
+		    },
+                    "message" : { "type" : "string" }
+                },
+                "required" : [ "status" ]
+            }
+        },
+        "entry_tests" : {
+	    "type" : "object",
+	    "properties" : {
+	        "no_match" : {
+                     "type" : "object",
+ 		     "properties" : {
+		         "format" : { "type" : "string" },
+		         "status" : { 
+			    "type" : "string", 
+			    "enum" : [ 
+			       "FAIL", 
+			       "WARN", 
+			       "PASS" 
+			  ] 
+		      }
+                   }
+               },
+               "defaults" : {
+                   "type" : "object",
+                   "properties" : {
+		       "format" : { "type" : "string" },
+		       "status" : { 
+		           "type" : "string", 
+		           "enum" : [ 
+			       "FAIL", 
+			       "WARN", 
+			       "PASS" 
+			   ] 
+		       }
+                   }
+               },
+	       "tests" : {
+                   "type" : "array",
+                   "items" : {
+                       "type" : "object",
+                       "properties" : {
+                            "test" : { "type" : "string" },
+		            "format" : { "type" : "string" },
+		            "status" : { 
+			         "type" : "string", 
+			         "enum" : [ 
+			             "FAIL", 
+			             "WARN", 
+			             "PASS",
+                                     "NONE" 
+			         ]
+                            } 
+		         }
+                     }
+                }
+            }
+        }
+    }
+}

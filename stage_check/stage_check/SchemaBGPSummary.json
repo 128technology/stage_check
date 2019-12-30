@@ -1,0 +1,19 @@
+{
+    "$comment" : "JSON Schema for TestBGPSummary test parameters",
+    "$comment" : "",
+    "$comment" : "Version 1.0, 08/13/2019",
+    "$comment" : "",
+
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "id": "https://128technology.com/schemas/BGPSummary.json#",
+    "title": "BGP Summary",
+    "description": "Refine BGP Summary Test Behavior (Linux-based)",
+    "type" : "object",
+    "properties" : {
+        "peer_routes_threshold"  : {
+            "type"    : "integer",
+            "minimum" : 1
+        }
+    }
+}
+

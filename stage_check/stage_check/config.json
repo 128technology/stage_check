@@ -1,0 +1,461 @@
+{
+  "Version"             : "0.0.1",
+  "BannerModule"        : "BannerText",
+  "RouterContextModule" : "RouterContext",
+  "PrimaryRegex"        : "P[0-9]+A$",
+  "SecondaryRegex"      : "P[0-9]+B$",
+  "SiteNumberRegex"     : "([0-9]+)",
+  "Tests" :  [
+     {
+        "TestModule"   : "AssetState",
+        "OutputModule" : "Text",
+        "Description"  : "Router Asset(s) State",
+        "Parameters"   : {
+           "exclude_tests" : [],
+           "entry_tests" : {
+               "defaults" : {
+                   "status"  : "FAIL",
+                   "format"  : "Node {nodeName} is in state {status}"
+               },
+               "tests" : [
+                   { "test" : "status != 'RUNNING'" }
+               ],
+               "result"    : {
+                   "PASS"  : "All {non_match_count}/{total_count} nodes are in state RUNNING",
+                   "FAIL"  : "{match_count}/{total_count} nodes are NOT RUNNING"
+               }
+           }
+        }
+     },
+     {
+        "TestModule"   : "DeviceState",
+        "OutputModule" : "Text",
+        "Description"  : "Network Device Status",
+        "Parameters"   : {
+           "entry_tests" : {
+               "no_match" : {
+                   "status"  : "PASS"
+               },
+               "defaults" : {
+                   "status"  : "FAIL",
+                   "format"  : "Node {node_name} dev {name} is {state.operationalStatus}"
+               },
+               "tests" : [
+                   { "test" : "node_type == 'primary' && state.operationalStatus == 'OPER_DOWN'" }
+               ],
+               "result" : {
+                   "PASS" : "{PASS}/{tested_count} interfaces ({exclude_count} excluded) are up",
+                   "FAIL" : "{FAIL}/{tested_count} interfaces are DOWN ({exclude_count} excluded)"
+               }
+           }
+        }
+     },
+     {
+        "TestModule"   : "PeerReachability",
+        "OutputModule" : "Text",
+        "Description"  : "Peer Reachability",
+        "Parameters"   : {
+            "exclude_tests" : [
+            ],
+            "entry_tests"  : {
+                "no_match" : {
+		    "status" : "PASS"
+                },
+	        "tests" : [
+                    {
+                        "test"   : "status != 'UP' && status != 'STANDBY'",
+                        "format" : "     Path {node}:{networkInterface}:{adjacentAddress} is {status}",
+                        "status" : "FAIL"
+                    }
+                ],
+                "result" : {
+                    "PASS" : "{tested_count} paths ({exclude_count} excluded) to {tested_peer_count} peers available",
+                    "FAIL" : "{FAIL}/{tested_count} paths DOWN ({exclude_count} excluded) to {failed_peer_count}/{tested_peer_count} peers"
+                }
+            }
+        }
+     },
+     {
+        "TestModule"   : "Sessions",
+        "OutputModule" : "Text",
+        "Description"  : "Inactive Sessions",
+        "Parameters"   : {
+            "max_sessions_to_query"  : 500,
+            "idle_maximum_seconds"   : 3600,
+            "idle_threshold_seconds" : 400,
+	    "filter_string"          : "5060",
+            "exclude_tests"          : [
+	        "sourcePort != 5060 && destPort != 5060"
+            ],
+            "entry_tests"            : {
+	        "tests"  : [
+                     {
+                         "test"   : "inactivityTimeout > 0 && 3600 - inactivityTimeout > 400", 
+                         "format" : "session {sessionUuid} idle {test_idle_duration}s",
+	   	         "status" : "FAIL"
+                     }
+                ],
+                "result"    : {
+                    "PASS"  : "{session_flow_count}/{session_flow_count} port {filter_string} sessions have idle times < {idle_threshold_seconds}s ({total_count} processed)",
+                    "FAIL"  : "{match_count}/{session_flow_count} port {filter_string} sessions idle > {idle_threshold_seconds}s ({total_count} processed)"
+                }
+            }
+         }
+     },
+     {
+        "TestModule"   : "NodeConnectivity",
+        "OutputModule" : "Text",
+        "Description"  : "Node Connectivity",
+        "Parameters"   : {
+	    "exclude_tests" : [
+                 {  "status": "CONNECTED" }
+            ]
+        }
+     },
+     {
+        "TestModule"   : "GatewayPing",
+        "OutputModule" : "Text",
+        "Description"  : "Ping Gateways",
+        "Parameters"   : {
+            "network_exclude_tests"      : [
+                 "state.adminStatus == 'ADMIN_DOWN'"
+            ],
+            "address_exclude_tests"      : [
+                 "@gateway == 'None' && prefixLength < 30"
+            ],
+            "network-interfaces" : [ 
+            ],
+            "static-address"     : true,
+            "iterations"         : 10
+        }
+     },
+     {
+        "TestModule"   : "T1Detail",
+        "OutputModule" : "Text",
+        "Description"  : "Node 1 T1 Parameters",
+        "Parameters"   : {
+            "node_type"    :  "primary|0",
+            "namespace"    :  "(t1-ns-[0-9]+) ",
+            "linux_device" :  "^[0-9]+: (w1.*?[0-9]+):",
+	    "find_devices" :  true,
+	    "entry_tests" : {
+               "no_match" : {
+                   "status"  : "PASS"
+               },
+               "defaults" : {
+                   "status"  : "FAIL"
+               },
+	       "tests"  : [
+               	   { "test" : "AIS == 'ON'", "format" : "{node_name}: AIS == {AIS}" }, 
+	           { "test" : "ALOS == 'ON'", "format" : "{node_name}: ALOS == {ALOS}" }, 
+                   { "test" : "Bit_Errors_CRC6/Ft/Fs > 1000", "format" : "{node_name}: Bit Errors CRC6/Ft/Fs ({Bit_Errors_CRC6/Ft/Fs}) > 1000" }, 
+                   { "test" : "LOF == 'ON'", "format" : "{node_name}: LOF == {LOF}" }, 
+                   { "test" : "LOS == 'ON'", "format" : "{node_name}: LOS == {LOS}" }, 
+                   { "test" : "Line_Code_Violation > 1000", "format" : "{node_name}: Line Code Violation ({Line_Code_Violation}) > 1000" }, 
+                   { "test" : "Loss_of_Signal == 'ON'", "format" : "{node_name}: Loss of Signal == {Loss_of_Signal}" },
+	           { "test" : "Open_Circuit == 'ON'", "format" : "{node_name}: Open Circuit == {Open_Circuit}" },
+                   { "test" : "Out_of_Frame_Errors > 1000", "format" : "{node_name}: Out of Frame Errors ({Out_of_Frame_Errors}) > 1000" }, 
+		   { "test" : "RAI == 'ON'", "format" : "{node_name}: RAI == {RAI}" },
+		   { "test" : "RED == 'ON'", "format" : "{node_name}: RED == {RED}" },
+		   { "test" : "Short_Circuit == 'ON'", "format" : "{node_name}: Short Circuit == {Short_Circuit}" },
+		   { "test" : "Sync_Errors > 1000", "format" : "{node_name}: Sync Errors ({Sync_Errors}) > 1000" },
+                   { "test" : "TxAIS == 'ON'", "format" : "{node_name}: TxAIS == {TxAIS}" }, 
+		   { "test" : "YEL == 'ON'", "format" : "YEL == {YEL}" },
+		   { "test" : "Rx_Level_High != '-2.5'", "format" : "{node_name}: Rx Level {Rx_Level_High} != -2.5" }
+            ]
+         }
+       }
+     },
+     {
+        "TestModule"    : "T1Detail",
+        "OutputModule"  : "Text",
+        "Description"   : "Node 2 T1 Parameters",
+        "SkipIfOneNode" : true,
+        "Parameters"    : {
+            "node_type"    :  "secondary|1",
+            "namespace"    :  "(t1-ns-[0-9]+) ",
+            "linux_device" :  "^[0-9]+: (w1.*?[0-9]+):",
+	    "find_devices" :  true,
+	    "entry_tests" : {
+               "no_match" : {
+                   "status"  : "PASS"
+               },
+               "defaults" : {
+                   "status"  : "FAIL"
+               },
+	       "tests"  : [
+               	   { "test" : "AIS == 'ON'", "format" : "{node_name}: AIS == {AIS}" }, 
+	           { "test" : "ALOS == 'ON'", "format" : "{node_name}: ALOS == {ALOS}" }, 
+                   { "test" : "Bit_Errors_CRC6/Ft/Fs > 1000", "format" : "{node_name}: Bit Errors CRC6/Ft/Fs ({Bit_Errors_CRC6/Ft/Fs}) > 1000" }, 
+                   { "test" : "LOF == 'ON'", "format" : "{node_name}: LOF == {LOF}" }, 
+                   { "test" : "LOS == 'ON'", "format" : "{node_name}: LOS == {LOS}" }, 
+                   { "test" : "Line_Code_Violation > 1000", "format" : "{node_name}: Line Code Violation ({Line_Code_Violation}) > 1000" }, 
+                   { "test" : "Loss_of_Signal == 'ON'", "format" : "{node_name}: Loss of Signal == {Loss_of_Signal}" },
+	           { "test" : "Open_Circuit == 'ON'", "format" : "{node_name}: Open Circuit == {Open_Circuit}" },
+                   { "test" : "Out_of_Frame_Errors > 1000", "format" : "{node_name}: Out of Frame Errors ({Out_of_Frame_Errors}) > 1000" }, 
+		   { "test" : "RAI == 'ON'", "format" : "{node_name}: RAI == {RAI}" },
+		   { "test" : "RED == 'ON'", "format" : "{node_name}: RED == {RED}" },
+		   { "test" : "Short_Circuit == 'ON'", "format" : "{node_name}: Short Circuit == {Short_Circuit}" },
+		   { "test" : "Sync_Errors > 1000", "format" : "{node_name}: Sync Errors ({Sync_Errors}) > 1000" },
+                   { "test" : "TxAIS == 'ON'", "format" : "{node_name}: TxAIS == {TxAIS}" }, 
+		   { "test" : "YEL == 'ON'", "format" : "YEL == {YEL}" },
+		   { "test" : "Rx_Level_High != '-2.5'", "format" : "{node_name}: Rx Level {Rx_Level_High} != -2.5" }
+            ]
+         }
+       }
+     },
+     {
+        "TestModule"   : "Ethtool",
+        "OutputModule" : "Text",
+        "Description"  : "Node 1 HA intf speed",
+        "SkipIfOneNode" : true,
+        "Parameters"   : {
+            "linux_device" : {
+                "default"        : "enp0s20f0"
+            },
+            "node_type"    : "primary|0",
+	    "entry_tests"  : {
+               "no_match" : {
+                   "status"  : "PASS",
+		   "format" : "{linux_device} speed is {Speed}"
+               },
+               "tests" : [
+                  {
+                    "test"   : "!?Speed",
+                    "status" : "WARN",
+                    "format" : "No value for 'Speed' returned; Is {linux_device} the correct device?"
+                  },
+	          {
+                    "test"   : "?Speed && Speed != '1000Mb/s'", 
+		    "status" : "FAIL",
+		    "format" : "{linux_device} speed is {Speed} < 1000Mb/s"
+     		  } 
+               ]
+            }
+         }
+     },
+     {
+        "TestModule"    : "Ethtool",
+        "OutputModule"  : "Text",
+        "Description"   : "Node 2 HA intf speed",
+	"SkipIfOneNode" : true,
+        "Parameters"    : {
+            "linux_device" : {
+                "default"        : "enp0s20f0"
+            },
+            "node_type"    : "secondary|1",
+	    "entry_tests"  : {
+               "no_match" : {
+                   "status"  : "PASS",
+		   "format" : "{linux_device} speed is {Speed}"
+               },
+               "tests" : [
+                  {
+                    "test"   : "!?Speed",
+                    "status" : "WARN",
+                    "format" : "No value for 'Speed' returned; Is {linux_device} the correct device?"
+                  },
+	          {
+                    "test"   : "Speed != '1000Mb/s'", 
+		    "status" : "FAIL",
+		    "format" : "{linux_device} speed is {Speed} < 1000Mb/s"
+     		  } 
+               ]
+            }
+         }
+     },
+     {
+        "TestModule"    : "RecentCores",
+        "OutputModule"  : "Text",
+        "Description"   : "Node 1 crashes",
+        "Parameters"    : {
+            "node_type" : "primary|0",
+	    "service"   : "128T"
+         }
+     },
+     {
+        "TestModule"    : "RecentCores",
+        "OutputModule"  : "Text",
+        "Description"   : "Node 2 crashes",
+        "SkipIfOneNode" : true,
+        "Parameters"    : {
+            "node_type" : "secondary|1",
+	    "service"   : "128T"
+         }
+     },
+     {
+        "TestModule"   : "LinuxServices",
+        "OutputModule" : "Text",
+        "Description"  : "Node 1 Linux Services",
+        "Parameters"   : {
+	   "node_type" : "primary|0",
+	   "services"  : [ "128T" ],
+           "exclude_tests" : [],
+           "entry_tests" : {
+               "defaults" : {
+                   "status"  : "FAIL"
+               },
+               "tests" : [
+                   { 
+                      "test" : "state_1 != 'active' && state_2 != 'running'",
+                      "format"  : "Service {service} is in state {state_1}/{state_2}" 
+                   }
+               ],
+               "result"    : {
+                   "PASS"  : "All {total_count} services checked are Active/Running",
+                   "FAIL"  : "{match_count}/{total_count} services checked are NOT Active/Running"
+              }
+           }
+        }
+     },
+     {
+        "TestModule"    : "LinuxServices",
+        "OutputModule"  : "Text",
+        "Description"   : "Node 2 Linux Services",
+        "SkipIfOneNode" : true,
+        "Parameters"    : {
+	   "node_type" : "secondary|1",
+	   "services"  : [ "128T" ],
+           "exclude_tests" : [],
+           "entry_tests" : {
+               "defaults" : {
+                   "status"  : "FAIL"
+               },
+               "tests" : [
+                   { 
+                      "test" : "state_1 != 'active' && state_2 != 'running'",
+                      "format"  : "Service {service} is in state {state_1}/{state_2}" 
+                   } 
+               ],
+               "result"    : {
+                   "PASS"  : "All {total_count} services checked are Active/Running",
+                   "FAIL"  : "{match_count}/{total_count} services checked are NOT Active/Running"
+              }
+           }
+        }
+     },
+     {
+        "TestModule"   : "LteInfo",
+        "OutputModule" : "Text",
+        "Description"  : "Node 1 LTE Intf Stats",
+        "Parameters"   : {
+            "node_type" : "primary|0",
+            "entry_tests" : {
+                "no_match" : {
+                    "status"  : "PASS"
+                },
+                "defaults" : {
+                    "status"  : "FAIL"
+                },
+                "tests"  : [
+                    {
+                        "test" : "RSSI_Signal_Strength < -90" ,
+                        "format" : "{namespace}/{linux_device} RSSI Signal Strength {RSSI_Signal_Strength} < -90"
+                    },
+                    {
+                        "test" : "SNR_Signal_Strength < -90" ,
+                        "format" : "{namespace}/{linux_device} SNR Signal Strength {SNR_Signal_Strength} < -90"
+                    }
+                ]
+            }
+        }
+     },
+     {
+        "TestModule"   : "LteInfo",
+        "OutputModule" : "Text",
+        "Description"  : "Node 2 LTE Intf Stats",
+        "SkipIfOneNode" : true,
+        "Parameters"   : {
+            "node_type" : "secondary|1",
+            "entry_tests" : {
+                "no_match" : {
+                    "status"  : "PASS"
+                },
+                "defaults" : {
+                    "status"  : "FAIL"
+                },
+                "tests"  : [
+                    {
+                        "test" : "RSSI_Signal_Strength < -90" ,
+                        "format" : "{namespace}/{linux_device} RSSI Signal Strength {RSSI_Signal_Strength} < -90"
+                    },
+                    {
+                        "test" : "SNR_Signal_Strength < -90" ,
+                        "format" : "{namespace}/{linux_device} SNR Signal Strength {SNR_Signal_Strength} < -90"
+                    }
+                ]
+            }
+        }
+     },
+     {
+        "TestModule"   : "ReachabilityFromPeers",
+        "OutputModule" : "Text",
+        "Description"  : "Reachable by Peers",
+        "SkipIfOneNode" : true,
+        "Parameters"   : {
+            "entry_tests" : {
+                "no_match" : {
+                    "status"  : "PASS"
+                },
+                "defaults" : {
+                    "status"  : "FAIL"
+                },
+                "tests"  : [
+                    {
+                        "test"   : "status != 'UP' && status != 'STANDBY'" ,
+                        "format" : "  {deviceInterface}:{networkInterface}->{adjacentNode} status={status}"
+                    }
+                ],
+               "result"    : {
+                   "PASS"  : "All {total_count} paths from {router_OK} routers are UP",
+                   "FAIL"  : "{router_FAIL}/{router_total} routers report {FAIL}/{total_count} paths DOWN"
+               }
+            }
+        }
+     },
+     {
+        "TestModule"   : "ProcessStates",
+        "OutputModule" : "Text",
+        "Description"  : "SSR Process States",
+        "SkipIfOneNode" : true,
+        "Parameters"   : {
+            "entry_tests" : {
+                "no_match" : {
+                    "status"  : "PASS"
+                },
+                "defaults" : {
+                    "status"  : "FAIL"
+                },
+                "tests"  : [
+                   { 
+                       "test"   : "!?peer_status && status != 'RUNNING'", 
+                       "format" : "{name} in state {status}",
+                       "status" : "FAIL" 
+                   },
+                   { 
+                       "test"   : "?peer_status && peer_status != 'RUNNING' && status != 'RUNNING'", 
+                       "format" : "{node_name}: {name} in state {status}, peer state {peer_status}",
+                       "status" : "FAIL" 
+                   },
+                   {
+                       "test"   : "?peer_leaderStatus && peer_leaderStatus != 'PRIMARY' && leaderSstatus != 'PRIMARY'",
+                       "format" : "{node_name}: {name} in leaderState {status}, peer leaderstate {peer_status}",
+                       "status" : "FAIL"  
+                   },
+                   {
+                       "test"   : "?peer_primary && peer_primary != TRUE && primary != TRUE",
+                       "format" : "{node_name}: {name} is not primary and peer is not primary",
+                       "status" : "FAIL"  
+                   }
+                ],
+               "result"    : {
+                   "PASS"  : "All {PASS}/{total_count} processes are RUNNING",
+                   "FAIL"  : "{FAIL}/{total_count} processes are NOT RUNNING"
+               }
+            }
+        }
+     }                                
+  ]
+}
+
+   

@@ -1,0 +1,85 @@
+{
+    "$comment" : "JSON Schema for TestEthtool  parameters",
+    "$comment" : "",
+    "$comment" : "Version 1.0, 08/13/2019",
+    "$comment" : "",
+
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "id": "https://128technology.com/schemas/Ethtool.json#",
+    "title": "Ethtool",
+    "description": "Refine Ethtool Count Detection",
+    "type" : "object",
+    "properties" : {
+        "linux_device" : { 
+            "type" : "object" 
+        },
+        "node_type" : { 
+	    "type" : "string", 
+	    "enum" : [ 
+                "0",
+                "1",
+		"primary", 
+		"secondary",
+                "primary|0",
+                "secondary|1"
+	    ] 
+	},
+        "exclude_tests" : {
+            "type" : "array",
+            "items" : {
+                "type" : "string"
+            }
+        },
+        "entry_tests" : {
+	    "type" : "object",
+	    "properties" : {
+	        "no_match" : {
+                     "type" : "object",
+ 		     "properties" : {
+		         "format" : { "type" : "string" },
+		         "status" : { 
+			    "type" : "string", 
+			    "enum" : [ 
+			       "FAIL", 
+			       "WARN", 
+			       "PASS" 
+			  ] 
+		      }
+                   }
+               },
+               "defaults" : {
+                   "type" : "object",
+                   "properties" : {
+		       "format" : { "type" : "string" },
+		       "status" : { 
+		           "type" : "string", 
+		           "enum" : [ 
+			       "FAIL", 
+			       "WARN", 
+			       "PASS" 
+			   ] 
+		       }
+                   }
+               },
+	       "tests" : {
+                   "type" : "array",
+                   "items" : {
+                       "type" : "object",
+                       "properties" : {
+                            "test" : { "type" : "string" },
+		            "format" : { "type" : "string" },
+		            "status" : { 
+			         "type" : "string", 
+			         "enum" : [ 
+			             "FAIL", 
+			             "WARN", 
+			             "PASS" 
+			         ]
+                            } 
+		         }
+                     }
+                }
+            }
+        }
+    }
+}

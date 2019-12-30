@@ -1,0 +1,67 @@
+{
+    "$comment" : "JSON Schema for TestRedundancyDatabaseConn test parameters",
+    "$comment" : "",
+    "$comment" : "Version 1.0, 08/13/2019",
+    "$comment" : "",
+
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "id": "https://128technology.com/schemas/RedundancyDatabaseConn.json#",
+    "title": "RedundancyDatabaseConn",
+    "description": "Refine redundancy Database Connection Test Behavior",
+    "type" : "object",
+    "properties" : {
+        "expected_entries" : { "type" : "integer" },
+        "entry_tests" : {
+	    "type" : "object",
+	    "properties" : {
+	        "no_match" : {
+                     "type" : "object",
+ 		     "properties" : {
+		         "format" : { "type" : "string" },
+		         "status" : { 
+			    "type" : "string", 
+			    "enum" : [ 
+			       "FAIL", 
+			       "WARN", 
+			       "PASS" 
+			  ] 
+		      }
+                   }
+               },
+               "defaults" : {
+                   "type" : "object",
+                   "properties" : {
+		       "format" : { "type" : "string" },
+		       "status" : { 
+		           "type" : "string", 
+		           "enum" : [ 
+			       "FAIL", 
+			       "WARN", 
+			       "PASS" 
+			   ] 
+		       }
+                   }
+               },
+	       "tests" : {
+                   "type" : "array",
+                   "items" : {
+                       "type" : "object",
+                       "properties" : {
+                            "test" : { "type" : "string" },
+		            "format" : { "type" : "string" },
+		            "status" : { 
+			         "type" : "string", 
+			         "enum" : [ 
+			             "FAIL", 
+			             "WARN", 
+			             "PASS",
+                                     "NONE" 
+			         ]
+                            } 
+		         }
+                     }
+                }
+            }
+        }
+    }
+}

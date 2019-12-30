@@ -1,0 +1,84 @@
+{
+    "$comment" : "JSON Schema for TestLinuxService parameters",
+    "$comment" : "",
+    "$comment" : "Version 1.0, 01/27/2020",
+    "$comment" : "",
+
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "id": "https://128technology.com/schemas/LinuxService.json#",
+    "title": "LinuxService",
+    "description": "Define Device Namespace Test Behavior",
+    "type" : "object",
+    "properties" : {
+        "services" : {
+            "type" : "array",
+            "items" : {
+                "type" : "string"
+            }
+        },
+        "exclude_tests" : {
+            "type" : "array",
+            "items" : {
+                "type" : "string"
+            }
+        },
+        "entry_tests" : {
+	    "type" : "object",
+	    "properties" : {
+               "defaults" : {
+                   "type" : "object",
+                   "properties" : {
+		       "format" : { "type" : "string" },
+		       "status" : { 
+		           "type" : "string", 
+		           "enum" : [ 
+			       "FAIL", 
+			       "WARN", 
+			       "PASS" 
+			   ] 
+		       }
+                   }
+               },
+	       "tests" : {
+                   "type" : "array",
+                   "items" : {
+                       "type" : "object",
+                       "properties" : {
+                            "test" : { "type" : "string" },
+		            "format" : { "type" : "string" },
+		            "status" : { 
+			         "type" : "string", 
+			         "enum" : [ 
+			             "FAIL", 
+			             "WARN", 
+			             "PASS" 
+			         ]
+                            } 
+		         }
+                     }
+                },
+	        "no_match" : {
+                     "type" : "object",
+ 		     "properties" : {
+		         "format" : { "type" : "string" },
+		         "status" : { 
+			    "type" : "string", 
+			    "enum" : [ 
+			       "FAIL", 
+			       "WARN", 
+			       "PASS" 
+			  ] 
+		      }
+                   }
+                },
+                "result" : {
+                     "type" : "object",
+                     "properties" : {
+                        "FAIL" : { "type" : "string" },
+                        "PASS" : { "type" : "string" }
+                     } 
+                }
+            }
+        }
+    }
+}
