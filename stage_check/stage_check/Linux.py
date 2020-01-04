@@ -22,6 +22,8 @@ import subprocess
 import pprint
 import pytz
 
+import sys
+
 class Callbacks(object):
    def run_linux_progress(self, message):
        return True
@@ -190,7 +192,7 @@ class Base(object):
       command,
       error_lines,
       json_data
-   ):
+  ):
       """  
       """
       output_lines = []
@@ -211,6 +213,44 @@ class Base(object):
           self.update_by_type(json_data, jdata)
       return shell_status     
 
+  def normalize_datetime(
+      self, 
+      input_time,
+      tz_regex="(.*?) ([^ ]+)$", 
+      tz_format="%a %Y-%m-%d %H:%M:%S"
+  ):
+      """
+      Ideally all Linux output converted to json would use UTC datetimes.  However,
+      some Linux comands (i.e. systemctl) do not output UTC date / times.  
+
+      This is a hackish workaround for writing addiional command-line python scripts
+      that move the conversion work to the remote host. The local timezone name is set
+      to the remote timezone name and the datetime converted to UTC, whereupon the original
+      timezone name is retored.
+
+      Since timezone names are a poor substitute for GMT offests, there will be times when 
+      this approach will not yield the desired results.
+      """
+      dt_utc = None
+      orig_zone = time.strftime("%Z")
+      tz_match = re.search(tz_regex, input_time)
+
+      if tz_match is not None: 
+          if tz_match.group(1) is None or \
+              tz_match.group(2) is None:
+              return None
+          # set the remote timezone
+          time_string = tz_match.group(1)
+          tz_string = tz_match.group(2)
+          os.environ['TZ'] = tz_string
+          time.tzset()
+          dt_local = datetime.datetime.strptime(time_string, tz_format)
+          dt_utc = dt_local.astimezone(pytz.utc)
+          # restore the local timezone
+          os.environ['TZ'] = orig_zone
+          time.tzset()
+          del os.environ['TZ']
+      return dt_utc
 
 class Ethtool(Base):
   """
@@ -330,9 +370,11 @@ class Coredumpctl(Base):
                   group_index += 1
               if len(data) > 0:
                   if "TIME" in data:
-                      struct_time = time.strptime(data["TIME"], "%a %Y-%m-%d %H:%M:%S %Z")
-                      epoch_time = int(time.mktime(struct_time))
-                      data["EPOCH_TIME"] = epoch_time
+                      dt_core  = self.normalize_datetime(data["TIME"])
+                      dt_epoch = datetime.datetime(1970,1,1)
+                      dt_epoch = dt_epoch.replace(tzinfo=pytz.UTC)
+                      epoch_secs = (dt_core - dt_epoch).total_seconds()
+                      data["EPOCH_TIME"] = epoch_secs
                   self.json_data.append(data)
           index += 1 
       return self.json_data
@@ -412,8 +454,7 @@ class SystemctlStatus(Base):
                   self.json_data["state_2"] = matches.group(2)
               if matches.group(3) is not None:
                   self.json_data["time"] = matches.group(3)
-                  dt_start = datetime.datetime.strptime(self.json_data["time"], "%a %Y-%m-%d %H:%M:%S %Z")
-                  dt_start = dt_start.replace(tzinfo=pytz.UTC)
+                  dt_start = self.normalize_datetime(self.json_data["time"])
                   dt_epoch = datetime.datetime(1970,1,1)
                   dt_epoch = dt_epoch.replace(tzinfo=pytz.UTC)
                   epoch_secs = (dt_start - dt_epoch).total_seconds()
@@ -1012,6 +1053,8 @@ class LogFilesSince(Base):
       regex  = r'\s*JSON:\s*(.*)'
       look_back_seconds = self.past_hours * self.SECONDS_PER_HOUR
 
+      self.debug = True
+
       self.clear_json()
       local_data = {}
       index = 0
@@ -1028,13 +1071,16 @@ class LogFilesSince(Base):
               print("JSON Parser Exception")
               continue
           index += 1
-
       try:
-          dt_now = datetime.datetime.strptime(local_data["now"], self.now_pattern)
+          dt_now = self.normalize_datetime(
+              local_data["now"], 
+              tz_regex="(.*?) \\[([^\\]]+)\\]$", 
+              tz_format="%b %d %H:%M:%S %Y"
+          )
       except Exception as e:
-          print(f"NowTime exception {e}")
+          print(f"NowTime exception {e} {e.__class__.__name__}")
           dt_now = None
-          
+
       if dt_now is not None:
           year = dt_now.year
           for entry in local_data["files"]:
@@ -1043,6 +1089,7 @@ class LogFilesSince(Base):
                   # force this year for now...
                   end_string += f" {year}"
                   dt_end = datetime.datetime.strptime(end_string, self.date_pattern)
+                  dt_end = dt_end.replace(tzinfo=pytz.UTC)
               except (KeyError, ValueError) as e:
                   print(f"File Entry Exception {e}")
                   continue
@@ -1213,7 +1260,6 @@ class LogFileMatches(Base):
               file_fstring += ","
           file_fstring += '\"' + fn  + '\"'
       seconds_past = self.past_hours * self.SECONDS_PER_HOUR
-      # Thanks python for this ugly mess and horrid scoping
       command = f"""python3.6 -c 'exec(\"\"\"import re, os, json, datetime
 max_lines={self.max_lines}
 dt_now = datetime.datetime.now()

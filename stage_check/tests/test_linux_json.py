@@ -1,15 +1,35 @@
 #!/usr/bin/env python3.6
 
+######################################################################################
+#   _            _       _ _                         _                               
+#  | |_ ___  ___| |_    | (_)_ __  _   ___  __      (_)___  ___  _ __    _ __  _   _ 
+#  | __/ _ \/ __| __|   | | | '_ \| | | \ \/ /      | / __|/ _ \| '_ \  | '_ \| | | |
+#  | ||  __/\__ \ |_    | | | | | | |_| |>  <       | \__ \ (_) | | | |_| |_) | |_| |
+#   \__\___||___/\__|___|_|_|_| |_|\__,_/_/\_\____ _/ |___/\___/|_| |_(_) .__/ \__, |
+#                  |_____|                  |_____|__/                  |_|    |___/ 
+##
+######################################################################################
+
 try:
     from stage_check import Linux
 except ImportError:
     import Linux
 
+import os
 import re
 import json
 import time
 import datetime
 import pprint
+
+import pytest
+
+def set_local_timezone(tz_string):
+    """
+    Change the local timezone for testing...
+    """
+    os.environ['TZ'] = tz_string
+    time.tzset()
 
 def test_ethtool():
     ethtool_info_text = """
@@ -64,8 +84,10 @@ Settings for enp0s20f0:
     assert json_dict == expected
     #pprint.pprint(json_dict)
 
-
-def test_coredumpctl_list():
+@pytest.mark.parametrize("tz_string", [
+   "EDT", "UTC"
+])
+def test_coredumpctl_list(tz_string):
     coredumpctl_list_text = """
 TIME                            PID   UID   GID SIG PRESENT EXE
 Wed 2019-09-11 10:05:48 EDT    6355  1001  1001  11   /usr/bin/pdmTransportAgent
@@ -103,6 +125,8 @@ Tue 2019-09-24 23:58:53 EDT    4994  1001  1001  11   /usr/bin/pdmTransportAgent
     }
     ]
 
+    set_local_timezone(tz_string)
+
     c = Linux.Coredumpctl(debug=True)
     output = coredumpctl_list_text.splitlines()
     json_dict = c.convert_to_json(output)
@@ -126,7 +150,10 @@ Tue 2019-09-24 23:58:53 EDT    4994  1001  1001  11   /usr/bin/pdmTransportAgent
     assert json_dict == expected 
     #pprint.pprint(json_dict)
 
-def test_systemctl_status():
+@pytest.mark.parametrize("tz_string", [
+   "EDT", "UTC"
+])
+def test_systemctl_status(tz_string):
     systemctl_status_text = """
 ● 128T.service - 128T service
    Loaded: loaded (/usr/lib/systemd/system/128T.service; enabled; vendor preset: disabled)
@@ -149,6 +176,8 @@ def test_systemctl_status():
     'uptime_minutes': 19,
     'uptime_seconds': 22
     }
+
+    set_local_timezone(tz_string)
 
     s = Linux.SystemctlStatus(debug=True)
     output = systemctl_status_text.splitlines()
