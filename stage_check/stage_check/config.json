@@ -119,6 +119,9 @@
         "Description"  : "Test Gateway Ping",
         "Parameters"   : {
             "node_type"          : "primary",
+            "exclude_tests"      : [
+                 "router/nodes/deviceInterfaces/state/adminStatus == 'ADMIN_DOWN'"
+            ],
             "network-interfaces" : [ 
                 "DIA" 
             ],

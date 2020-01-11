@@ -34,6 +34,7 @@ class MatchFunction(object):
 class TestLexer(sly.Lexer):
     # Set of token names.   This is always required
     tokens = { INT, FLOAT, KEY, STRING, BOOL, KEY_TEST,
+               ISTYPE,
                PLUS, MINUS, MULT, DIVIDE,
                EQ, LT, LE, GT, GE, NE, 
                OR, AND,
@@ -59,6 +60,7 @@ class TestLexer(sly.Lexer):
     AND     = r'&&'
     LPAREN  = r'\('
     RPAREN  = r'\)'
+    ISTYPE  = r'::'
 
     @_(r'\d+')
     def INT(self, t):
@@ -175,6 +177,28 @@ class TestParser(sly.Parser):
         if self.debug:
             print(f"{p[0]} == {p[2]}: {p[0] == p[2]}")
         return p[0] == p[2]
+
+    @_('expr_comp ISTYPE expr_add')
+    def expr_comp(self, p):
+        try:
+            type_name = p[0].__class__.__name__
+            if type_name == 'NoneType' and \
+               p[2] == 'None':
+                retval = True
+            else:
+                retval = (type_name == p[2])
+                if self.debug:
+                    print(f"{type_name} :: {p[2]}: {retval}")
+        except NameError:
+            type_name = 'Undefined'
+            retval = (type_name == p[2])
+            if self.debug:
+                print(f"{type_name} :: {p[2]}: {retval}")
+        except ValueError as e:
+            retval = False
+            if self.debug:
+                print(f"{e}, {e.__class__.__name__}")
+        return retval
 
     @_('expr_comp NE expr_add')
     def expr_comp(self, p):

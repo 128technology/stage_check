@@ -175,7 +175,7 @@ class TestBase:
         fs.create_file("/etc/128technology/global.init", contents=global_init_router)
         token_path = os.path.join(os.environ['HOME'], '.graphql')
         token_file_path = os.path.join(token_path, 'token')
-        fs.create_file(token_file_path, contents="this_is_a_bogus_token_for_testsing")
+        fs.create_file(token_file_path, contents="this_is_a_bogus_token_for_testing")
 
     @pytest.fixture
     def create_conductor_files(self, fs):
@@ -185,7 +185,7 @@ class TestBase:
         fs.create_file("/etc/128technology/global.init", contents=global_init_conductor)
         token_path = os.path.join(os.environ['HOME'], '.graphql')
         token_file_path = os.path.join(token_path, 'token')
-        fs.create_file(token_file_path, contents="this_is_a_bogus_token_for_testsing")
+        fs.create_file(token_file_path, contents="this_is_a_bogus_token_for_testing")
 
     @pytest.fixture
     def local_context(self):

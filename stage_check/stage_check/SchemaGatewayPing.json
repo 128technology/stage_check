@@ -47,9 +47,24 @@
                 { "format" : "ipv6" }
              ]
          },
-        "static-address" : { "type" : "boolean" }
+        "static-address" : { "type" : "boolean" },
+        "address_mode" : { 
+	    "type" : "string" ,
+	    "enum" : [ "static", "dynamic", "auto" ]
+	},
+        "network_exclude_tests" : {
+            "type" : "array",
+            "items" : {
+                "type" : "string"
+            }
+        },
+        "address_exclude_tests" : {
+            "type" : "array",
+            "items" : {
+                "type" : "string"
+            }
+        }
     },
-    "required" : [ "node_type" ],
     "oneOf" : [
        {
            "required" : [ "device-interfaces" ]

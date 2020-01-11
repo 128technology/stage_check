@@ -229,8 +229,10 @@ class Test_GatewayPing(pytest_common.TestBase):
         }
     }
 
-    
-    config = {
+    """
+    static-address is specified in parametrized data...
+    """
+    default_config = {
         "TestModule"   : "GatewayPing",
         "OutputModule" : "Text",
         "Description"  : "Test Gateway Ping",
@@ -244,9 +246,51 @@ class Test_GatewayPing(pytest_common.TestBase):
         }
     }
 
+    mode_dynamic_config = {
+        "TestModule"   : "GatewayPing",
+        "OutputModule" : "Text",
+        "Description"  : "Test Gateway Ping",
+        "Parameters"   : {
+            "node_type"          : "primary",
+            "network-interfaces" : [ 
+                "DIA" 
+            ],
+            "address_type"       : "dynamic",
+            "iterations"         : 10
+        }
+    }
+
+    mode_static_config = {
+        "TestModule"   : "GatewayPing",
+        "OutputModule" : "Text",
+        "Description"  : "Test Gateway Ping",
+        "Parameters"   : {
+            "node_type"          : "primary",
+            "network-interfaces" : [ 
+                "DIA" 
+            ],
+            "address_type"       : "static",
+            "iterations"         : 10
+        }
+    }
+
+    mode_auto_config = {
+        "TestModule"   : "GatewayPing",
+        "OutputModule" : "Text",
+        "Description"  : "Test Gateway Ping",
+        "Parameters"   : {
+            "node_type"          : "primary",
+            "network-interfaces" : [ 
+                "DIA" 
+            ],
+            "address_type"       : "auto",
+            "iterations"         : 10
+        }
+    }
+
     def setup(self):
         self.args = argparse.Namespace()
-        self.args.debug = False
+        self.args.debug = True
         self.args.regex_patterns = False
         self.args.version = False
         self.args.router=""
@@ -258,6 +302,7 @@ class Test_GatewayPing(pytest_common.TestBase):
     @responses.activate
     @pytest.mark.parametrize('test_instance', [
        {
+          "config"          : default_config,
           "json_ni_reply"   : default_ni_data,
           "json_ping_reply" : {
                'data': {
@@ -274,6 +319,7 @@ class Test_GatewayPing(pytest_common.TestBase):
            "message" : "0  Test Gateway Ping             : \x1b[32m\x1b[01mPASS\x1b[0m  NI DIA: 10/10 replies from 10.0.0.1; average latency 8.4ms"
        },
        {
+          "config"          : default_config,
           "json_ni_reply"   : default_ni_data,
           "json_ping_reply" : {
                'data': {
@@ -290,6 +336,7 @@ class Test_GatewayPing(pytest_common.TestBase):
            "message" : "0  Test Gateway Ping             : \x1b[32m\x1b[01mPASS\x1b[0m  NI DIA: 10/10 replies from 10.0.0.1; average latency 8.4ms"
        },
        {
+          "config"          : default_config,
           "json_ni_reply"   : default_ni_data,
           "json_ping_reply" : {
                'data': {
@@ -304,6 +351,23 @@ class Test_GatewayPing(pytest_common.TestBase):
                  }
            },
            "message" : "0  Test Gateway Ping             : \x1b[31m\x1b[01mFAIL  NI DIA: 10/10 fails to 10.0.0.1; average latency 0.0ms\x1b[0m"
+       },
+       {
+          "config"          : mode_auto_config,
+          "json_ni_reply"   : default_ni_data,
+          "json_ping_reply" : {
+               'data': {
+                    'ping': {
+                         'reachable': True,
+                         'responseTime': '8.443',
+                         'sequence': 1,
+                         'status': 'SUCCESS',
+                         'statusReason': '',
+                         'ttl': 255
+                     }
+                 }
+           },
+           "message" : "0  Test Gateway Ping             : \x1b[32m\x1b[01mPASS\x1b[0m  NI DIA: 10/10 replies from 10.0.0.1; average latency 8.4ms"
        }
     ] 
    )
@@ -314,7 +378,8 @@ class Test_GatewayPing(pytest_common.TestBase):
         JSON_NI_RESPONSE = test_instance["json_ni_reply"]
         JSON_PING_RESPONSE = test_instance["json_ping_reply"]
         test_id = 0
-        test = TestGatewayPing.create_instance(test_id, Test_GatewayPing.config, self.args)
+        config = test_instance["config"]
+        test = TestGatewayPing.create_instance(test_id, config, self.args)
         test.create_output_instance()
         router_context = RouterContext.create_instance(local_context, self.args.router, self.args)
         test.run(local_context, router_context, None, fp=None)
@@ -324,7 +389,7 @@ class Test_GatewayPing(pytest_common.TestBase):
         
         if self.args.debug == False:
             # Match Progress strings 
-            max_count = Test_GatewayPing.config["Parameters"]["iterations"]
+            max_count = config["Parameters"]["iterations"]
             cur_it = 0
             cur_index = 2
             while cur_it < max_count:

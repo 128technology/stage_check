@@ -64,7 +64,7 @@ except ImportError:
 
 class TestExecutor(object):
 
-  TEST_EXECUTOR_VERSION = '1.4.0'
+  TEST_EXECUTOR_VERSION = '1.5.0'
   
   # Overall test config...
   JSON_SCHEMA_FILE = "config_schema.json"

@@ -201,7 +201,7 @@ class RawGQL:
       output_list = []
       fields_noop = {}
 
-      def unedgify(edgy_dict):
+      def unedgify(edgy_node):
           """
           Replaces ['edges']['node'][key]....
                      LIST     DICT
@@ -216,19 +216,19 @@ class RawGQL:
           [{ 'key-1', 'value-1' },
            { 'key-1', 'value-1' }]
           """
-          if edgy_dict is not None:
-              if 'edges' in edgy_dict:
-                  edgy_dict = edgy_dict['edges']
+          if isinstance(edgy_node, dict):
+              if 'edges' in edgy_node:
+                  edgy_node = edgy_node['edges']
                   index = 0
-                  while index < len(edgy_dict):
-                      if 'node' in edgy_dict[index]:
-                          edgy_dict[index] = edgy_dict[index]['node']
-                      unedgify(edgy_dict[index])
-                      index += 1
-                  #print(f'#####################')
-                  #pprint.pprint(edgy_dict)
-                  #print(f'#####################')
-          return edgy_dict
+                  while index < len(edgy_node):
+                      if 'node' in edgy_node[index]:
+                          edgy_node[index] = edgy_node[index]['node']
+                      edgy_node[index] = unedgify(edgy_node[index])
+                      index = index + 1
+              else:
+                  for key in edgy_node:
+                      edgy_node[key] = unedgify(edgy_node[key])
+          return edgy_node
 
       def _flatten_json(node, stop_prefix, seperator='.', prefix='router', depth=0):
           """

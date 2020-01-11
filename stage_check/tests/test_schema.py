@@ -20,7 +20,8 @@ import glob
 import pytest
 
 
-CONFIG_PATH = "../stage_check"
+CONFIG_PATH = os.environ.get('SCHEMA_TEST_CONFIG_PATH', '../stage_check')
+
 TEST_CONFIG_SCHEMA = os.path.join(CONFIG_PATH, "config_schema.json")
 TEST_CONFIG = os.path.join(CONFIG_PATH, "config.json")
 

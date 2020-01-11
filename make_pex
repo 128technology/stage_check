@@ -95,13 +95,14 @@ function print_error {
 }
 
 TOOLS_MODULE_LIST=(\
-  mock \
   pex \
+  tox \
+  wheel \
+  mock \
+  pyfakefs \
   pytest \
   pytest_mock \
-  pyfakefs \
-  responses \
-  wheel 
+  responses
 )
 
 for dir in ${SOURCE_DIRS[@]} ; do
@@ -140,52 +141,16 @@ for dir in ${SOURCE_DIRS[@]} ; do
     popd
 
     print_message "Processing $cur_target..."
-    print_message "Install venv with target specific modules for pytest testing..."
     pushd "$SCRIPT_PATH/$dir"
-    mapfile -t lines < <(perl -ne 'print if /install_requires=\[/ ... /\]/' setup.py)
-    for entry in ${lines[@]} ; do
-        if [ ${entry:0:1} != "'" ] ; then
-           continue
-        fi
-        mod=${entry#"'"}
-        mod=${mod%","}
-        mod=${mod%"'"}
-        print_message $PYTHON -m pip install $mod
-        $PYTHON -m pip install $mod
-    done
-    popd
 
-    pushd "$SCRIPT_PATH/$dir/tests"
-    pytests=(test_*.py)
-    if [ -e "${pytests[0]}" ] ; then
-	old_path="$PYTHONPATH"
-        add_paths="$SCRIPT_PATH/$dir/$dir:$SCRIPT_PATH/$dir/tests"
-	if [ -z "$PYTHONPATH" ] ; then
-	    export PYTHONPATH="$add_paths"
-        else
-	    export PYTHONPATH="$PYTHONPATH:$add_paths"
-        fi
-        print_message "Run pytests against $dir"
-        # pytest -s ${pytests[@]}
-	print_message pytest ${pytests[@]}
-        pytest_cmd="pytest"
-        if [ ! -z "${MAKE_PEX_VERBOSE}" ] ; then
-            pytest_cmd="${pytest_cmd} -s"
-        fi
-	${pytest_cmd} ${pytests[@]}
-        pystatus=$?
-        export PYTHONPATH="$old_path"
-        if [ $pystatus -ne 0 ] ; then
-            popd
-            print_error "**** ERROR pytest status=$pystatus; skipping $dir ****"
-            exit 1
-        fi
-    else
-        print_message "---------------------"
-        print_message "| No pytests found..."
-        print_message "---------------------"
-    fi
+    tox 
+    toxstatus=$?
+
     popd
+    if [ $toxstatus -ne 0 ] ; then
+        print_error "**** ERROR pytest status=$pystatus; skipping $dir ****"
+        exit 1
+    fi
 
     # cp -R "$SCRIPT_PATH/$dir"/* would copy the tests directory, which
     # is not desireable

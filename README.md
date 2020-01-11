@@ -7,6 +7,7 @@ Stage check is a tool used to diagnose and / or check the health of  128 Technol
 Ideally stage check should be built on a recent Linux distribution with the fiollowing packages installed:
 - git
 - python36
+- tox
 
 This tool is distributed as a python pex file, a self extracting binary which when executed, creates a dedicated python virtual environment and installs the required modules.  
 
@@ -24,6 +25,7 @@ repo-root
   +-stage_check { currently the only project }
     |-setup.py
     |-requirements.py
+    |-tox.ini
     +-stage_check
       |-{ source files }
     +-tests

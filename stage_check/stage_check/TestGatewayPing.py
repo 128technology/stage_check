@@ -14,6 +14,11 @@ except ImportError:
     import AbstractTest
 
 try:
+    from stage_check import EntryTest
+except ImportError:
+    import EntryTest
+
+try:
     from stage_check import Output
 except ImportError:
     import Output
@@ -48,22 +53,89 @@ class TestGatewayPing(AbstractTest.GraphQL):
       the schema check, if they are missing...
       """
       default_params = {
-         "node_type"          : '',
-         "device-interfaces"  : [],
-         "network-interfaces" : [],
-         "sequence"           : 1,
-         "size"               : 100,
-         "timeout"            : 2,
-         "identifier"         : 68686868,
-         "iterations"         : 100,
-         "destination-ip"     : '',
-         "static-address"     : False,
-         "exclude_list"       : [ ]
+         "device-interfaces"     : [],
+         "network-interfaces"    : [],
+         "sequence"              : 1,
+         "size"                  : 100,
+         "timeout"               : 2,
+         "identifier"            : 68686868,
+         "iterations"            : 100,
+         "destination-ip"        : '',
+         "address_mode"          : "auto",
+         "network_exclude_tests" : [ ],
+         "address_exclude_tests" : [ ]
       }
 
       params = self.apply_default_params(default_params)
+
+      # for backwards compatibility: params["node_type"] now replaces
+      # network_exclude_tests with an extry excluding the opposite
+      # node type.  
+      try:
+          node_type = params["node_type"] 
+          if node_type == 'primary':
+              params["network_exclude_tests"] = [ "node_type == 'secondary'" ]
+          elif node_type == 'secondary':
+              params["network_exclude_tests"] = [ "node_type == 'primary'" ]
+          else:
+              params["network_exclude_tests"] = [ ]
+      except KeyError:
+          pass
+
       return params
 
+  def valid_address(self, address):
+      """
+      A valid address must be a dictionary where:
+         address["ipAddress"] exists,
+         is a string,
+         and is not:
+           - ''
+           - '<empty>'
+      """
+      bad_ip_values = [ "", "<empty>" ]
+      if not isinstance(address, dict):
+          return False
+      try:
+          ip_address = address["ipAddress"]
+          for ip_value in bad_ip_values:
+              if ip_address == ip_value:
+                  return False
+      except (KeyError, TypeError, ValueError) as e:
+          return False
+      return True
+ 
+  def valid_addresses(self, addresses):
+      """
+      If one or more addresses is valid then the address list
+      is considred valid...
+      """
+      if not isinstance(addresses, list):
+          return False
+      if len(addresses) == 0:
+          return False
+      valid_address = False
+      for address in addresses:
+          if self.valid_address(address):
+              valid_address = True
+              break
+      return valid_address
+      
+  def get_address_list(self, entry):
+      addresses = None
+      try:
+          if self.valid_addresses(entry["addresses"]):
+              addresses = entry["addresses"]
+      except KeyError: 
+          pass
+      if addresses is None:
+          try:
+              if self.valid_addresses(entry["state"]["addresses"]):
+                  addresses = entry["state"]["addresses"]
+          except KeyError:
+              pass
+      return addresses      
+          
   def run(self, local_info, router_context, gql_token, fp):
       """
       This test uses the gql engine to learn gateway IP addresses
@@ -84,15 +156,27 @@ class TestGatewayPing(AbstractTest.GraphQL):
       """
       intf_list = params["network-interfaces"]
       dev_list  = params["device-interfaces"]
+      network_exclude_tests = params["network_exclude_tests"]
+      address_exclude_tests = params["address_exclude_tests"]
+
+      # backwards compatibility
+      try:
+          if params["static-address"]:
+              address_mode = "static"
+          else:
+              address_mode = "dynamic"
+      except KeyError:
+          address_mode = params["address_mode"]
 
       if self.debug:
           print(f'------ Network Interfaces to Process  ------')
           pprint.pprint(intf_list)
 
+      devint_fields = "state { operationalStatus adminStatus redundancyStatus }"
       qr = gql_helper.NodeGQL("allRouters", ['name'], [ router_context.get_router() ], debug=self.debug)
       qn = gql_helper.NodeGQL("nodes", [ 'name' , 'assetId' ])
-      qd = gql_helper.NodeGQL("deviceInterfaces", [ 'name', 'sharedPhysAddress', 'state { operationalStatus }' ], dev_list)
-      qi = gql_helper.NodeGQL("networkInterfaces", ['name', 'state { addresses { ipAddress gateway prefixLength } }'], intf_list)
+      qd = gql_helper.NodeGQL("deviceInterfaces", [ 'name', 'type', 'sharedPhysAddress', devint_fields ], dev_list)
+      qi = gql_helper.NodeGQL("networkInterfaces", ['name', 'type', 'state { addresses { ipAddress gateway prefixLength } }'], intf_list)
       qa = gql_helper.NodeGQL("addresses", ['ipAddress', 'gateway', 'prefixLength'])
       qr.add_node(qn)
       qn.add_node(qd)
@@ -103,7 +187,7 @@ class TestGatewayPing(AbstractTest.GraphQL):
       if not self.send_query(qr, gql_token, json_reply):
           return self.output.test_end(fp);
 
-      if params["static-address"]:
+      if address_mode == "static":
           flatter_json = qr.flatten_json(json_reply, 'router/nodes/deviceInterfaces/networkInterfaces/addresses', '/')
           ni_name_key='router/nodes/deviceInterfaces/networkInterfaces/name'
       else:
@@ -121,33 +205,49 @@ class TestGatewayPing(AbstractTest.GraphQL):
           print('........ flattened list ..........')
           pprint.pprint(flatter_json)
 
+      engine = EntryTest.Parser(debug=self.debug)
       self.output.progress_start(fp)
 
       gateway_success_count = 0
       gateway_fail_count    = 0
       gateway_count         = 0
 
+      stats = {}
+      Output.init_result_stats(stats);
+      stats["total_count"]           = len(flatter_json)
+      stats["address_total_count"]   = len(flatter_json)
+      stats["address_exclude_count"] = 0
+
       for entry in flatter_json:
           if self.debug:
               print(f'%%% process NI for Ping %%%')
               pprint.pprint(entry)
-          if params["node_type"] != '' and \
-              entry['node_type'] != params["node_type"]:
-              if self.debug:
-                  print(f"NI {entry[ni_name_key]}: Skipping {entry['node_type']} node {entry['node_name']}")
+
+          if engine.exclude_entry(entry, network_exclude_tests):
+              stats["exclude_count"] += 1
               continue
+
           address = ''
           gateway = ''
+
           try:
-              if params["static-address"]:
-                   addresses = [ entry ]
+              if address_mode == "static":
+                  addresses = [ entry ]
+              elif address_mode == "dynamic":
+                  addresses = entry['state']['addresses']
               else:
-                   addresses = entry['state']['addresses']
+                  addresses = self.get_address_list(entry)
               if self.debug:
                   print(f'%%%% process address for Ping %%%%')
                   pprint.pprint(addresses)
               egress_interface = entry[ni_name_key]
+
+              stats["address_total_count"] += len(addresses)
               for address_entry in addresses:
+                  if engine.exclude_entry(address_entry, address_exclude_tests):
+                      stats["address_exclude_count"] += 1
+                      continue
+
                   address = address_entry['ipAddress']
                   gateway = address_entry['gateway']
                   prefix_length = int(address_entry['prefixLength'])
