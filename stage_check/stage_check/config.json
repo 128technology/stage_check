@@ -63,7 +63,7 @@
                 },
 	        "tests" : [
                     {
-                        "test"   : "status != 'UP'",
+                        "test"   : "status != 'UP' && status != 'STANDBY'",
                         "format" : "     Path {node}:{networkInterface}:{adjacentAddress} is {status}",
                         "status" : "FAIL"
                     }
@@ -118,51 +118,13 @@
         "OutputModule" : "Text",
         "Description"  : "Test Gateway Ping",
         "Parameters"   : {
-            "node_type"          : "primary",
-            "exclude_tests"      : [
+            "network_exclude_tests"      : [
                  "router/nodes/deviceInterfaces/state/adminStatus == 'ADMIN_DOWN'"
             ],
-            "network-interfaces" : [ 
-                "DIA" 
+            "address_exclude_tests"      : [
+                 "@gateway == 'None' && prefixLength < 30"
             ],
-            "static-address"     : false,
-            "iterations"         : 10
-        }
-     },
-     {
-        "TestModule"   : "GatewayPing",
-        "OutputModule" : "Text",
-        "Description"  : "Test Gateway Ping",
-        "Parameters"   : {
-            "node_type"          : "primary",
             "network-interfaces" : [ 
-                "lte" 
-            ],
-            "static-address"     : true,
-            "iterations"         : 10
-        }
-     },
-     {
-        "TestModule"   : "GatewayPing",
-        "OutputModule" : "Text",
-        "Description"  : "Test Gateway Ping",
-        "Parameters"   : {
-            "node_type"          : "secondary",
-            "network-interfaces" : [ 
-                "mpls-t1" 
-            ],
-            "static-address"     : false,
-            "iterations"         : 10
-        }
-     },
-     {
-        "TestModule"   : "GatewayPing",
-        "OutputModule" : "Text",
-        "Description"  : "Test Gateway Ping",
-        "Parameters"   : {
-            "node_type"          : "secondary",
-            "network-interfaces" : [ 
-                "mpls-t1" 
             ],
             "static-address"     : true,
             "iterations"         : 10

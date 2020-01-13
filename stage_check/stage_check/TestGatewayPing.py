@@ -74,11 +74,15 @@ class TestGatewayPing(AbstractTest.GraphQL):
       try:
           node_type = params["node_type"] 
           if node_type == 'primary':
-              params["network_exclude_tests"] = [ "node_type == 'secondary'" ]
+              params["network_exclude_tests"].append("node_type == 'secondary'")
           elif node_type == 'secondary':
-              params["network_exclude_tests"] = [ "node_type == 'primary'" ]
-          else:
-              params["network_exclude_tests"] = [ ]
+              params["network_exclude_tests"].append("node_type == 'primary'")
+
+          address_type = params["address-type"]
+          if address_type == 'static':
+              params["address_exclude_tests"] = [ "address_type == 'dynamic'" ]
+          elif node_type == 'secondary':
+              params["address_exclude_tests"] = [ "address_type == 'static'" ]
       except KeyError:
           pass
 
@@ -120,20 +124,31 @@ class TestGatewayPing(AbstractTest.GraphQL):
               valid_address = True
               break
       return valid_address
+
+  def set_address_type(self, addresses, typestr):
+      if not isinstance(addresses, list):
+          return
+      for addr in addresses:
+          if not isinstance(addr, dict):
+              addr["address_type"] = typestr
       
   def get_address_list(self, entry):
       addresses = None
+      typestr   = None
       try:
           if self.valid_addresses(entry["addresses"]):
               addresses = entry["addresses"]
+              typestr = "static"
       except KeyError: 
           pass
       if addresses is None:
           try:
               if self.valid_addresses(entry["state"]["addresses"]):
                   addresses = entry["state"]["addresses"]
+                  typestr = "dynamic"
           except KeyError:
               pass
+      self.set_address_type(addresses, typestr)
       return addresses      
           
   def run(self, local_info, router_context, gql_token, fp):
@@ -187,15 +202,8 @@ class TestGatewayPing(AbstractTest.GraphQL):
       if not self.send_query(qr, gql_token, json_reply):
           return self.output.test_end(fp);
 
-      if address_mode == "static":
-          flatter_json = qr.flatten_json(json_reply, 'router/nodes/deviceInterfaces/networkInterfaces/addresses', '/')
-          ni_name_key='router/nodes/deviceInterfaces/networkInterfaces/name'
-      else:
-          # stop prefix should be router/nodes/deviceInterfaces/networkInterfaces/state, but because no address is
-          # returned for one of the peers (state=None), flatten_json skips that node. So go one level higher and
-          # live with it for now.
-          flatter_json = qr.flatten_json(json_reply, 'router/nodes/deviceInterfaces/networkInterfaces', '/')
-          ni_name_key='name'
+      flatter_json = qr.flatten_json(json_reply, 'router/nodes/deviceInterfaces/networkInterfaces', '/')
+      ni_name_key='name'
 
       router_context.set_allRouters_node_type(flatter_json)
 
@@ -218,12 +226,12 @@ class TestGatewayPing(AbstractTest.GraphQL):
       stats["address_total_count"]   = len(flatter_json)
       stats["address_exclude_count"] = 0
 
-      for entry in flatter_json:
+      for netintf in flatter_json:
           if self.debug:
               print(f'%%% process NI for Ping %%%')
-              pprint.pprint(entry)
+              pprint.pprint(netintf)
 
-          if engine.exclude_entry(entry, network_exclude_tests):
+          if engine.exclude_entry(netintf, network_exclude_tests):
               stats["exclude_count"] += 1
               continue
 
@@ -231,16 +239,11 @@ class TestGatewayPing(AbstractTest.GraphQL):
           gateway = ''
 
           try:
-              if address_mode == "static":
-                  addresses = [ entry ]
-              elif address_mode == "dynamic":
-                  addresses = entry['state']['addresses']
-              else:
-                  addresses = self.get_address_list(entry)
+              addresses = self.get_address_list(netintf)
               if self.debug:
                   print(f'%%%% process address for Ping %%%%')
                   pprint.pprint(addresses)
-              egress_interface = entry[ni_name_key]
+              egress_interface = netintf["name"]
 
               stats["address_total_count"] += len(addresses)
               for address_entry in addresses:
@@ -270,14 +273,14 @@ class TestGatewayPing(AbstractTest.GraphQL):
                           gateway = ''
                           target = dest_ip
                       else:
-                          self.output.proc_cannot_ping_no_gateway(entry, ni_name_key)
+                          self.output.proc_cannot_ping_no_gateway(netintf, ni_name_key)
                           gateway_count += 1
                           continue
 
                   try:
-                      oper_status = entry['router/nodes/deviceInterfaces/state/operationalStatus']
+                      oper_status = netintf['router/nodes/deviceInterfaces/state/operationalStatus']
                       if oper_status != 'OPER_UP':
-                          self.output.proc_cannot_ping_dev_status(entry, ni_name_key, oper_status)
+                          self.output.proc_cannot_ping_dev_status(netintf, ni_name_key, oper_status)
                           gateway_count += 1
                           #continue
                           break
@@ -296,8 +299,8 @@ class TestGatewayPing(AbstractTest.GraphQL):
                   size    =  params["size"]
                   timeout = params["timeout"]
                   seqno   = params["sequence"]
-                  router  = entry["router/name"]
-                  node    = entry["node_name"]
+                  router  = netintf["router/name"]
+                  node    = netintf["node_name"]
                   identifier = params["identifier"]
 
                   total_response_time   = float(0)
@@ -322,7 +325,7 @@ class TestGatewayPing(AbstractTest.GraphQL):
                           print(f'argstr={argstr}')
 
                       # display progress in-place as does 128status.sh...
-                      now_message=f"NI {entry[ni_name_key]}: ping {gateway} {ping_count}/{params['iterations']} tmo={params['timeout']}s"
+                      now_message=f"NI {netintf[ni_name_key]}: ping {gateway} {ping_count}/{params['iterations']} tmo={params['timeout']}s"
                       self.output.progress_display(now_message, fp)
                       qp = gql_helper.RawGQL(f'ping({argstr}) ' + '{ status statusReason reachable sequence ttl responseTime }', debug=self.debug)
                       json_ping_reply = {}
@@ -346,7 +349,7 @@ class TestGatewayPing(AbstractTest.GraphQL):
                           else:
                               ping_fail_count      += 1
                       except (KeyError, TypeError) as e:
-                          self.output.proc_no_data_in_reply(entry, ni_name_key, gateway)
+                          self.output.proc_no_data_in_reply(netintf, ni_name_key, gateway)
                           ping_fail_count += 1
                           gateway_count += 1
                           continue
@@ -354,18 +357,18 @@ class TestGatewayPing(AbstractTest.GraphQL):
                   if ping_count == ping_success_count:
                       # fix this for multiple matching entries
                       gateway_success_count += 1
-                      self.output.proc_ping_result_pass(entry, ni_name_key, 
+                      self.output.proc_ping_result_pass(netintf, ni_name_key, 
                                                         ping_count, ping_success_count, 
                                                         target, average_response_time)             
                   else:
                       gateway_fail_count += 1
-                      self.output.proc_ping_result_fail(entry, ni_name_key, 
+                      self.output.proc_ping_result_fail(netintf, ni_name_key, 
                                                         ping_count, ping_fail_count, 
                                                         target, average_response_time)             
               gateway_count += 1
 
           except (TypeError) as e:
-              self.output.proc_no_address_in_reply(entry, ni_name_key);
+              self.output.proc_no_address_in_reply(netintf, ni_name_key);
               continue
       
       status = self.output.status

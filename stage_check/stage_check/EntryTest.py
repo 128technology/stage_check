@@ -34,33 +34,33 @@ class MatchFunction(object):
 class TestLexer(sly.Lexer):
     # Set of token names.   This is always required
     tokens = { INT, FLOAT, KEY, STRING, BOOL, KEY_TEST,
-               ISTYPE,
+               TYPE2STR,
                PLUS, MINUS, MULT, DIVIDE,
                EQ, LT, LE, GT, GE, NE, 
                OR, AND,
                LPAREN, RPAREN }
 
-    literals = { '(', ')', '\'' }
+    literals = { '(', ')', '\'', '@' }
 
     # String containing ignored characters
     ignore = ' \t'
 
     # Regular expression rules for tokens
-    PLUS    = r'\+'
-    MINUS   = r'-'
-    MULT    = r'\*'
-    DIVIDE  = r'/'
-    EQ      = r'=='
-    LE      = r'<='
-    LT      = r'<'
-    GE      = r'>='
-    GT      = r'>'
-    NE      = r'!='
-    OR      = r'\|\|'
-    AND     = r'&&'
-    LPAREN  = r'\('
-    RPAREN  = r'\)'
-    ISTYPE  = r'::'
+    PLUS     = r'\+'
+    MINUS    = r'-'
+    MULT     = r'\*'
+    DIVIDE   = r'/'
+    EQ       = r'=='
+    LE       = r'<='
+    LT       = r'<'
+    GE       = r'>='
+    GT       = r'>'
+    NE       = r'!='
+    OR       = r'\|\|'
+    AND      = r'&&'
+    LPAREN   = r'\('
+    RPAREN   = r'\)'
+    TYPE2STR = r'@'
 
     @_(r'\d+')
     def INT(self, t):
@@ -178,28 +178,6 @@ class TestParser(sly.Parser):
             print(f"{p[0]} == {p[2]}: {p[0] == p[2]}")
         return p[0] == p[2]
 
-    @_('expr_comp ISTYPE expr_add')
-    def expr_comp(self, p):
-        try:
-            type_name = p[0].__class__.__name__
-            if type_name == 'NoneType' and \
-               p[2] == 'None':
-                retval = True
-            else:
-                retval = (type_name == p[2])
-                if self.debug:
-                    print(f"{type_name} :: {p[2]}: {retval}")
-        except NameError:
-            type_name = 'Undefined'
-            retval = (type_name == p[2])
-            if self.debug:
-                print(f"{type_name} :: {p[2]}: {retval}")
-        except ValueError as e:
-            retval = False
-            if self.debug:
-                print(f"{e}, {e.__class__.__name__}")
-        return retval
-
     @_('expr_comp NE expr_add')
     def expr_comp(self, p):
         if self.debug:
@@ -275,6 +253,18 @@ class TestParser(sly.Parser):
         if self.debug:
             print(f"({p.expr_or})")
         return p.expr_or
+
+    @_('TYPE2STR expr')
+    def expr(self, p):
+        try:
+            type_name = p[1].__class__.__name__
+            if type_name == 'NoneType':
+                type_name = 'None'
+        except NameError:
+            type_name = 'Undefined'
+        if self.debug:
+            print(f"@{p[1]}: {type_name}")
+        return type_name
 
     @_('term')
     def expr(self, p):

@@ -33,24 +33,39 @@ test_data = [
              },
              "tests" : [
                  {
-                     "test"    : "Loss_Of_Signal > 1000",
+                     "test"    : "@Loss_Of_Signal == 'Undefined'",
                      "status"  : "FAIL",
-                     "format"  : "Loss_Of_Signal Test", 
+                     "format"  : "Test Undefined Variable", 
+                 },
+                 {
+                     "test"    : "@Loss_Of_Signal == 'None'",
+                     "status"  : "FAIL",
+                     "format"  : "Test None Variable", 
+                 },
+                 {
+                     "test"    : "@Loss_Of_Signal != 'Undefined' && Loss_Of_Signal > 1000",
+                     "status"  : "FAIL",
+                     "format"  : "Test Loss_Of_Signal > 1000", 
                  },
                  {
                      "test"    : "?gateway == False",
                      "status"  : "WARN",
-                     "format"  : "gateway is false", 
+                     "format"  : "Test Gateway Undefined", 
                  },
                  {
                      "test"   : "route/ipPrefix == '0.0.0.0/0' && gateway == '172.23.5.1' && route/l4Port < 1000",
                      "status" : "FAIL",
-                     "format" : "default has gateway == {gateway}", 
+                     "format" : "Test Compound expression for {gateway}", 
                  },
                  {
                      "test"   : "route/ipPrefix == '0.0.0.0/8'",
                      "status" : "PASS",
-                     "format" : "fubar"
+                     "format" : "Test PASS for route/ipPrefix"
+                 },
+                 {
+                     "test"   : "route/ipPrefix == '0.0.0.0/8'",
+                     "status" : "FAIL",
+                     "format" : "Test FAIL for route/ipPrefix"
                  }
              ]
          }
@@ -127,7 +142,22 @@ test_data = [
         {
              "status" : "PASS"
         }
-    )
+    ),
+    (
+        {
+        },
+        {
+             "status" : "FAIL"
+        }
+   ),
+    (
+        {
+             "Loss_Of_Signal" : None
+        },
+        {
+             "status" : "FAIL"
+        }
+   )
 ]
 )
 
